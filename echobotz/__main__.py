@@ -1,7 +1,6 @@
 # ruff: noqa: E402
 
 import asyncio
-import os
 from datetime import datetime
 from logging import Formatter
 
@@ -26,6 +25,8 @@ bot_loop = asyncio.get_event_loop()
 
 
 async def main():
+    from asyncio import gather
+
     def changetz(*args):
         return datetime.now(tz(Config.TIMEZONE)).timetuple()
 
@@ -33,11 +34,12 @@ async def main():
 
     await database._load_all()
 
-    EchoBot.start()
-    EchoBot.set_bot_commands(_get_bot_commands())
-    LOGGER.info("Bot Cmds Set Successfully")
+    await gather(
+        EchoBot.start(),
+        EchoBot.set_bot_commands(_get_bot_commands()),
+    )
 
-    me = EchoBot.get_me()
+    me = await EchoBot.get_me()
     LOGGER.info(f"Echo Bot Started as: @{me.username}")
 
     add_plugs()
@@ -51,7 +53,7 @@ async def main():
 
     await idle()
 
-    EchoBot.stop()
+    await EchoBot.stop()
     LOGGER.info("Echo Client stopped.")
 
 
