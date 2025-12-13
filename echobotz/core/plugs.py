@@ -1,7 +1,7 @@
 from pyrogram.handlers import MessageHandler, CallbackQueryHandler
 from pyrogram import filters
 
-from .EchoClient import EchoClient
+from .EchoClient import EchoBot
 from ..plugins.poster import _poster_cmd
 from ..plugins.broadcast import _broadcast
 from ..plugins.cmds import _strt, _ping
@@ -16,7 +16,7 @@ from ..helper.utils.filters import CustomFilters
 
 
 def add_plugs():
-    EchoClient.bot.add_handler()(
+    EchoBot.bot.add_handler()(
         MessageHandler(
             _strt,
             filters.command(BotCommands.StartCommand, case_sensitive=True)
