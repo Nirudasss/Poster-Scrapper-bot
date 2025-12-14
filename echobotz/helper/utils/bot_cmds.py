@@ -40,6 +40,7 @@ class BotCommands:
             "pixelcdn", "pixeldrain",
             "nexdrive", "nd",
             "hblinks", "hbl",
+            "vegamovies", "vega",
             "extraflix",
             "extralink",
             "luxdrive",
@@ -62,6 +63,7 @@ BotCommands.build()
 CMD_HELP = {
     "poster": "Scrape any movie/show poster",
     "gdflix": "Bypass GDFlix links to direct links",
+    "vegamovies": "Bypass Vegamovies links to direct links",
     "extraflix": "Bypass ExtraFlix links to direct links",
     "hubcloud": "Bypass HubCloud links to direct links",
     "vcloud": "Bypass VCloud links to direct links",
