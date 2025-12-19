@@ -16,9 +16,18 @@ class EchoBypass:
 
         try:
             if self.method == "POST":
-                resp = await _sync_to_async(requests.post, api_url, json={"url": url}, timeout=30)
+                resp = await _sync_to_async(
+                    requests.post,
+                    api_url,
+                    json={"url": url},
+                    timeout=30
+                )
             else:
-                resp = await _sync_to_async(requests.get, api_url, timeout=30)
+                resp = await _sync_to_async(
+                    requests.get,
+                    api_url,
+                    timeout=30
+                )
         except Exception:
             return None, "Failed to reach bypass service."
 
@@ -43,27 +52,41 @@ class EchoBypass:
     def _unwrap(self, data):
         if isinstance(data, dict):
             return data
+
         if isinstance(data, list):
             if not data:
                 return {}
             if len(data) == 1 and isinstance(data[0], dict):
                 return data[0]
-            return {"results": data, "pack": True}
+            return {"results": data}
+
         return {}
 
     def _norm(self, data):
-        if data.get("pack") and isinstance(data.get("results"), list):
-            return {
-                "hc_pack": True,
-                "hc_pack_results": data["results"],
-                "total_files": len(data["results"]),
-                "service": self.key
-            }, None
+        results = data.get("results")
+
+        if isinstance(results, list) and results:
+            if isinstance(results[0], dict) and (
+                "file_name" in results[0] or "links" in results[0]
+            ):
+                return {
+                    "hc_pack": True,
+                    "hc_pack_results": results,
+                    "total_files": len(results),
+                    "service": self.key
+                }, None
 
         root = data.get("final") or data
-        title = root.get("title") or root.get("file_name") or root.get("fileName") or "N/A"
-        size = root.get("filesize") or root.get("file_size") or "N/A"
-        fmt = root.get("format") or root.get("file_format") or "N/A"
+
+        title = (
+            root.get("title")
+            or root.get("file_name")
+            or root.get("fileName")
+            or "N/A"
+        )
+        filesize = root.get("filesize") or root.get("file_size") or "N/A"
+        file_format = root.get("format") or root.get("file_format") or "N/A"
+
         links = _xlnk(root)
 
         if not links:
@@ -71,12 +94,12 @@ class EchoBypass:
 
         return {
             "title": str(title),
-            "filesize": str(size),
-            "format": str(fmt),
+            "filesize": str(filesize),
+            "format": str(file_format),
             "links": links,
             "service": self.key
         }, None
-
+        
 def _xlnk(root):
     out = {}
     raw = root.get("links")
