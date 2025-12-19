@@ -13,6 +13,7 @@ class EchoBypass:
 
     async def fetch(self, url):
         api_url = self.endpoint if self.method == "POST" else f"{self.endpoint}{quote_plus(url)}"
+        LOGGER.info(f"EchoBypass: [{self.key}] API URL: {api_url}")
 
         try:
             if self.method == "POST":
@@ -28,25 +29,36 @@ class EchoBypass:
                     api_url,
                     timeout=30
                 )
-        except Exception:
+            LOGGER.info(f"EchoBypass: [{self.key}] Status Code: {resp.status_code}")
+        except Exception as e:
+            LOGGER.error(f"EchoBypass: [{self.key}] HTTP error: {e}", exc_info=True)
             return None, "Failed to reach bypass service."
 
         if resp.status_code != 200:
+            LOGGER.error(
+                f"EchoBypass: [{self.key}] API error {resp.status_code}: {resp.text[:200]}"
+            )
             return None, "Bypass service error."
 
         try:
             data = resp.json()
-        except Exception:
+            LOGGER.info(f"EchoBypass: [{self.key}] JSON parsed successfully")
+        except Exception as e:
+            LOGGER.error(f"EchoBypass: [{self.key}] JSON parse error: {e}")
             return None, "Invalid response from bypass service."
 
         data = self._unwrap(data)
+        LOGGER.info(f"EchoBypass: [{self.key}] Data unwrapped: {type(data).__name__}")
 
         if not isinstance(data, dict):
+            LOGGER.error(f"EchoBypass: [{self.key}] Invalid JSON structure")
             return None, "Unexpected response from bypass service."
 
         if data.get("success") is False:
+            LOGGER.error(f"EchoBypass: [{self.key}] API failure: {data.get('message')}")
             return None, data.get("message") or "Bypass failed."
 
+        LOGGER.info(f"EchoBypass: [{self.key}] Normalizing response")
         return self.norm(data)
 
     def _unwrap(self, data):
@@ -66,8 +78,12 @@ class EchoBypass:
         results = data.get("results")
 
         if isinstance(results, list) and results:
-            if isinstance(results[0], dict) and (
-                "file_name" in results[0] or "links" in results[0]
+            first = results[0]
+            if isinstance(first, dict) and (
+                "file_name" in first
+                or "links" in first
+                or "quality" in first
+                or "link" in first
             ):
                 return {
                     "hc_pack": True,
@@ -90,6 +106,7 @@ class EchoBypass:
         links = _xlnk(root)
 
         if not links:
+            LOGGER.error(f"EchoBypass: [{self.key}] No direct links found after normalization")
             return None, "No direct links found."
 
         return {
