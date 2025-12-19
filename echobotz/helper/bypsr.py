@@ -116,9 +116,24 @@ class EchoBypass:
             "links": links,
             "service": self.key
         }, None
-        
+
 def _xlnk(root):
     out = {}
+
+    for k, v in root.items():
+        if not isinstance(v, dict):
+            continue
+
+        url = v.get("link") or v.get("url")
+        name = v.get("name") or k
+
+        if isinstance(url, str) and url.startswith(("http://", "https://")):
+            out[_clean(name)] = url
+
+        g = v.get("google_final")
+        if isinstance(g, str) and g.startswith(("http://", "https://")):
+            out[_clean("Google Drive")] = g
+
     raw = root.get("links")
 
     if isinstance(raw, dict):
