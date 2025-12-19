@@ -97,43 +97,40 @@ def _bp_links(links):
     if not isinstance(links, dict) or not links:
         return "╰╴ No direct links found."
 
-    groups = {}
+    grouped = any("|" in str(k) for k in links)
+    out = []
 
-    for label, url in links.items():
-        if not isinstance(url, str):
+    if not grouped:
+        items = [
+            (str(k).strip() or "Link", v.strip())
+            for k, v in links.items()
+            if isinstance(v, str) and v.strip().startswith(("http://", "https://"))
+        ]
+        for i, (k, v) in enumerate(items):
+            out.append(
+                f"{'╰╴' if i == len(items)-1 else '╞╴'} <b>{k}:</b> <a href=\"{v}\">Click Here</a>"
+            )
+        return "\n".join(out) if out else "╰╴ No direct links found."
+
+    groups = {}
+    for k, v in links.items():
+        if not isinstance(v, str):
             continue
-        u = url.strip()
+        u = v.strip()
         if not u.startswith(("http://", "https://")):
             continue
+        a, b = str(k).split("|", 1)
+        groups.setdefault(a.strip(), []).append((b.strip(), u))
 
-        text = str(label).strip()
-
-        if "|" in text:
-            left, right = text.split("|", 1)
-            group = left.strip()
-            server = right.strip()
-        else:
-            group = "Links"
-            server = text
-
-        groups.setdefault(group, []).append((server, u))
-
-    if not groups:
-        return "╰╴ No direct links found."
-
-    lines = []
-
-    for group, items in groups.items():
-        lines.append(f"\n<b>{group}</b>")
-        total = len(items)
-        for i, (server, url) in enumerate(items):
-            prefix = "╰╴" if i == total - 1 else "╞╴"
-            lines.append(
-                f"{prefix} <b>{server}:</b> <a href=\"{url}\">Click Here</a>"
+    for g, items in groups.items():
+        out.append(f"\n<b>{g}</b>")
+        for i, (k, v) in enumerate(items):
+            out.append(
+                f"{'╰╴' if i == len(items)-1 else '╞╴'} <b>{k}:</b> <a href=\"{v}\">Click Here</a>"
             )
 
-    return "\n".join(lines).strip()
-    
+    return "\n".join(out).strip()
+
 def _bp_norm(data, service):
     root = data
     if isinstance(data, dict) and isinstance(data.get("final"), dict):
