@@ -8,7 +8,6 @@ from config import Config
 from echobotz.eco import echo
 from ..helper.utils.btns import EchoButtons
 
-# -- User session for pack navigation
 _bp_user_page = {}
 
 def _sexy(name):
@@ -68,7 +67,6 @@ async def _bypass_cmd(client, msg):
         await edit_message(wait_msg, f"<b>Error:</b> <code>{err}</code>")
         LOGGER.error(f"Bypass error: {err}")
         return
-    # Special pack result (HubCloud etc.)
     if info.get("hc_pack") and isinstance(info.get("hc_pack_results"), list):
         uid = msg.from_user.id if msg.from_user else 0
         pid = f"{uid}_{id(info)}"
@@ -76,11 +74,10 @@ async def _bypass_cmd(client, msg):
         results = info["hc_pack_results"]
         txt, nav, page, maxp = _pack_html(results, page=1, per_page=10)
         btns = _pack_btns(uid, pid, 1, maxp)
-        header = f"<b>✺Source:</b> { _sexy(info.get('service')) }\n<b>HubCloud Pack Results</b>\n\n{nav}\n\n"
+        header = f"<b>✺Source:<b>{_sexy(info.get('service'))} Pack Results</b>\n\n{nav}\n\n"
         await edit_message(wait_msg, f"{header}{txt}\n", buttons=btns, disable_web_page_preview=True)
         LOGGER.info(f"Sent pack results for user {uid}, pack {pid}")
         return
-    # Common result block
     service = _sexy(info.get("service"))
     title = info.get("title")
     filesize = info.get("filesize")
