@@ -74,7 +74,7 @@ async def _bypass_cmd(client, msg):
         results = info["hc_pack_results"]
         txt, nav, page, maxp = _pack_html(results, page=1, per_page=10)
         btns = _pack_btns(uid, pid, 1, maxp)
-        header = f"<b>✺Source:<b>{_sexy(info.get('service'))} Pack Results</b>\n\n{nav}\n\n"
+        header = f"<b>✺Source:</b> {_sexy(info.get('service'))}\n<b>Pack Results</b>\n\n{nav}\n\n"
         await edit_message(wait_msg, f"{header}{txt}\n", buttons=btns, disable_web_page_preview=True)
         LOGGER.info(f"Sent pack results for user {uid}, pack {pid}")
         return
@@ -147,7 +147,7 @@ async def _bypass_hc_pack_cb(client, query):
             return
         txt, nav, curr, maxp = _pack_html(results, page=page, per_page=10)
         btns = _pack_btns(uid, pid, curr, maxp)
-        header = f"<b>✺Source:</b> HubCloud\n<b>HubCloud Pack Results</b>\n\n{nav}\n\n"
+        header = f"<b>✺Source:</b> Pack\n<b>Pack Results</b>\n\n{nav}\n\n"
         await edit_message(query.message, f"{header}{txt}\n", buttons=btns, disable_web_page_preview=True)
         await query.answer()
         LOGGER.info(f"pack_cb: navigated pack {pid} page {page}")
