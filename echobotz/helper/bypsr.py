@@ -1,125 +1,241 @@
-import json
 from urllib.parse import urlparse, quote_plus
-
 import requests
 
 from .. import LOGGER
 from .utils.xtra import _sync_to_async
 
-_BYPASS_CMD_TO_SERVICE = {
-    "gdflix": "gdflix",
-    "gdf": "gdflix",
-    "extraflix": "extraflix",
-    "hubcloud": "hubcloud",
-    "hc": "hubcloud",
-    "hubdrive": "hubdrive",
-    "hd": "hubdrive",
-    "hubcdn": "hubcdn",
-    "hcdn": "hubcdn",
-    "transfer_it": "transfer_it",
-    "ti": "transfer_it",
-    "vcloud": "vcloud",
-    "vc": "vcloud",
-    "driveleech": "driveleech",
-    "dleech": "driveleech",
-    "neo": "neo",
-    "neolinks": "neo",
-    "gdrex": "gdrex",
-    "gdex": "gdrex",
-    "pixelcdn": "pixelcdn",
-    "pcdn": "pixelcdn",
-    "extralink": "extralink",
-    "luxdrive": "luxdrive",
-    "nexdrive": "nexdrive",
-    "nd": "nexdrive",
-    "hblinks": "hblinks",
-    "hbl": "hblinks",
-    "vegamovies": "vegamovies",
-    "vega": "vegamovies",
-}
+class EchoBypass:
+    def __init__(self, key, endpoint, method="GET", norm=None):
+        self.key = key
+        self.endpoint = endpoint
+        self.method = method
+        self.norm = norm or self._norm
 
-_BYPASS_ENDPOINTS = {
-    #By: Hgbots
-    "gdflix": "https://hgbots.vercel.app/bypaas/gd.php?url=",
-    "hubdrive": "https://hgbots.vercel.app/bypaas/hubdrive.php?url=",  
-    #By: NickUpdates
-    "transfer_it": "https://transfer-it-henna.vercel.app/post",
-    #By: PBX1
-    "hubcloud": "https://pbx1botapi.vercel.app/api/hubcloud?url=",
-    "vcloud": "https://pbx1botapi.vercel.app/api/vcloud?url=",
-    "hubcdn": "https://pbx1botapi.vercel.app/api/hubcdn?url=",
-    "driveleech": "https://pbx1botapi.vercel.app/api/driveleech?url=",
-    "neo": "https://pbx1botapi.vercel.app/api/neo?url=",
-    "gdrex": "https://pbx1botapi.vercel.app/api/gdrex?url=",
-    "pixelcdn": "https://pbx1botapi.vercel.app/api/pixelcdn?url=",
-    "extraflix": "https://pbx1botapi.vercel.app/api/extraflix?url=",
-    "extralink": "https://pbx1botapi.vercel.app/api/extralink?url=",
-    "luxdrive": "https://pbx1botapi.vercel.app/api/luxdrive?url=",
-    "nexdrive": "https://pbx1botsapi2.vercel.app/api/nexdrive?url=",
-    "hblinks": "https://pbx1botsapi2.vercel.app/api/hblinks?url=",
-    "vegamovies": "https://pbx1botsapi2.vercel.app/api/vega?url=",
-}
+    async def fetch(self, url):
+        api_url = self.endpoint if self.method == "POST" else f"{self.endpoint}{quote_plus(url)}"
+        LOGGER.info(f"[{self.key}] API URL: {api_url}")
 
-def _bp_srv(cmd):
-    cmd = cmd.lower().lstrip("/")
-    return _BYPASS_CMD_TO_SERVICE.get(cmd)
+        try:
+            if self.method == "POST":
+                resp = await _sync_to_async(
+                    requests.post,
+                    api_url,
+                    json={"url": url},
+                    timeout=30
+                )
+            else:
+                resp = await _sync_to_async(
+                    requests.get,
+                    api_url,
+                    timeout=30
+                )
+            LOGGER.info(f"[{self.key}] Status Code: {resp.status_code}")
+        except Exception as e:
+            LOGGER.error(f"[{self.key}] HTTP error: {e}", exc_info=True)
+            return None, "Failed to reach bypass service."
 
-def _bp_label_from_key(key):
-    mapping = {
-        "instant_final": "Instant",
-        "cloud_r2": "Cloud R2",
-        "zip_final": "ZIP",
-        "pixeldrain": "Pixeldrain",
-        "telegram_file": "Telegram",
-        "gofile_final": "Gofile",
-    }
-    if key in mapping:
-        return mapping[key]
-    return key.replace("_", " ").title()
+        if resp.status_code != 200:
+            LOGGER.error(
+                f"[{self.key}] API error {resp.status_code}: {resp.text[:200]}"
+            )
+            return None, "Bypass service error."
 
-def _bp_label_from_name(name):
-    s = str(name).strip()
-    low = s.lower()
-    if "[" in s and "]" in s and "download" in low:
-        i1 = s.find("[")
-        i2 = s.rfind("]")
-        if i1 != -1 and i2 != -1 and i2 > i1:
-            inner = s[i1 + 1 : i2].strip()
-            if inner:
-                return inner
-    if low.startswith("download "):
-        return s[8:].strip() or s
-    return s
+        try:
+            data = resp.json()
+            LOGGER.info(f"[{self.key}] JSON parsed successfully")
+        except Exception as e:
+            LOGGER.error(f"[{self.key}] JSON parse error: {e}")
+            return None, "Invalid response from bypass service."
 
-def _pack_results_html(results, page=1, per_page=10):
-    total = len(results)
-    max_page = (total - 1) // per_page + 1
-    page = max(1, min(page, max_page))
-    start = (page - 1) * per_page
-    end = min(total, page * per_page)
-    out = []
-    for i, item in enumerate(results[start:end], start=1+start):
-        name = item.get("file_name") or "File"
-        sz = item.get("file_size") or "N/A"
-        src = item.get("source") or ""
-        out.append(f"<b>{i}. {name}</b> <code>({sz})</code>")
-        links = item.get("links") or []
-        for li in links:
-            typ = li.get("type") or "Link"
-            url = li.get("url")
-            if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+        data = self._unwrap(data)
+        LOGGER.info(f"[{self.key}] Data unwrapped: {type(data).__name__}")
+
+        if not isinstance(data, dict):
+            LOGGER.error(f"[{self.key}] Invalid JSON structure")
+            return None, "Unexpected response from bypass service."
+
+        if data.get("success") is False:
+            LOGGER.error(f"[{self.key}] API failure: {data.get('message')}")
+            return None, data.get("message") or "Bypass failed."
+
+        LOGGER.info(f"[{self.key}] Normalizing response")
+        return self.norm(data)
+
+    def _unwrap(self, data):
+        if isinstance(data, dict):
+            return data
+
+        if isinstance(data, list):
+            if not data:
+                return {}
+            if len(data) == 1 and isinstance(data[0], dict):
+                return data[0]
+            return {"results": data}
+
+        return {}
+
+    def _norm(self, data):
+        results = data.get("results")
+
+        if isinstance(results, list) and results:
+            first = results[0]
+            if isinstance(first, dict) and (
+                "file_name" in first
+                or "links" in first
+                or "quality" in first
+                or "link" in first
+            ):
+                return {
+                    "hc_pack": True,
+                    "hc_pack_results": results,
+                    "total_files": len(results),
+                    "service": self.key
+                }, None
+
+        root = data.get("final") or data
+
+        direct = root.get("url")
+        if isinstance(direct, str) and direct.startswith(("http://", "https://")):
+            return {
+                "title": root.get("file_name") or "N/A",
+                "filesize": root.get("file_size") or "N/A",
+                "format": "N/A",
+                "links": {"Direct Link": direct},
+                "service": self.key
+            }, None
+
+        title = (
+            root.get("title")
+            or root.get("file_name")
+            or root.get("fileName")
+            or "N/A"
+        )
+        filesize = root.get("filesize") or root.get("file_size") or "N/A"
+        file_format = root.get("format") or root.get("file_format") or "N/A"
+
+        links = _xlnk(root)
+
+        if not links:
+            LOGGER.error(f"[{self.key}] No direct links found after normalization")
+            return None, "No direct links found."
+
+        return {
+            "title": str(title),
+            "filesize": str(filesize),
+            "format": str(file_format),
+            "links": links,
+            "service": self.key
+        }, None
+        
+def _xlnk(root):
+    out = {}
+
+    for k, v in root.items():
+        if not isinstance(v, dict):
+            continue
+
+        url = v.get("link") or v.get("url")
+        name = v.get("name") or k
+
+        if isinstance(url, str) and url.startswith(("http://", "https://")):
+            out[_clean(name)] = url
+
+        g = v.get("google_final")
+        if isinstance(g, str) and g.startswith(("http://", "https://")):
+            out[_clean("Google Drive")] = g
+
+    raw = root.get("links")
+
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if isinstance(v, str) and v.startswith(("http://", "https://")):
+                out[_clean(k)] = v
+            elif isinstance(v, dict):
+                u = v.get("url") or v.get("link")
+                if isinstance(u, str) and u.startswith(("http://", "https://")):
+                    out[_clean(k)] = u
+
+    elif isinstance(raw, list):
+        for i in raw:
+            if not isinstance(i, dict):
                 continue
-            out.append(f'   ╞ <b>{typ}</b>: <a href="{url}">Click Here</a>')
-        out.append("")
-    txt = "\n".join(out).strip()
-    nav = f"<b>Page: {page}/{max_page}</b> | <b>Total Files: {total}</b>"
-    return (txt, nav, page, max_page)
-    
-def _bp_links(links):
+            u = i.get("url") or i.get("link")
+            n = i.get("type") or i.get("name") or "Link"
+            if isinstance(u, str) and u.startswith(("http://", "https://")):
+                out[_clean(n)] = u
+
+    return out
+
+def _clean(s):
+    return str(s).replace("_", " ").replace("Link", "").strip().title() or "Link"
+
+EchoByRegistry = {
+    # By: HgBots
+    "gdflix": EchoBypass("gdflix", "https://hgbots.vercel.app/bypaas/gd.php?url="),
+    "hubdrive": EchoBypass("hubdrive", "https://hgbots.vercel.app/bypaas/hubdrive.php?url="),
+    # By: PBX1 
+    "extraflix": EchoBypass("extraflix", "https://pbx1botapi.vercel.app/api/extraflix?url="),
+    "hubcloud": EchoBypass("hubcloud", "https://pbx1botapi.vercel.app/api/hubcloud?url="),
+    "vcloud": EchoBypass("vcloud", "https://pbx1botapi.vercel.app/api/vcloud?url="),
+    "hubcdn": EchoBypass("hubcdn", "https://pbx1botapi.vercel.app/api/hubcdn?url="),
+    "driveleech": EchoBypass("driveleech", "https://pbx1botapi.vercel.app/api/driveleech?url="),
+    "neo": EchoBypass("neo", "https://pbx1botapi.vercel.app/api/neo?url="),
+    "gdrex": EchoBypass("gdrex", "https://pbx1botapi.vercel.app/api/gdrex?url="),
+    "pixelcdn": EchoBypass("pixelcdn", "https://pbx1botapi.vercel.app/api/pixelcdn?url="),
+    "extralink": EchoBypass("extralink", "https://pbx1botapi.vercel.app/api/extralink?url="),
+    "luxdrive": EchoBypass("luxdrive", "https://pbx1botapi.vercel.app/api/luxdrive?url="),
+    "nexdrive": EchoBypass("nexdrive", "https://pbx1botsapi2.vercel.app/api/nexdrive?url="),
+    "hblinks": EchoBypass("hblinks", "https://pbx1botsapi2.vercel.app/api/hblinks?url="),
+    "vegamovies": EchoBypass("vegamovies", "https://pbx1botsapi2.vercel.app/api/vega?url="),
+    # By: NickUpdates
+    "transfer_it": EchoBypass("transfer_it", "https://transfer-it-henna.vercel.app/post", method="POST"),
+}
+
+CMD_TO_KEY = {
+    a: k
+    for k, v in {
+        "gdflix": ["gdflix", "gd"],
+        "hubdrive": ["hubdrive", "hd"],
+        "extraflix": ["extraflix", "exf"],
+        "hubcloud": ["hubcloud", "hc"],
+        "vcloud": ["vcloud", "vc"],
+        "hubcdn": ["hubcdn", "hcdn"],
+        "driveleech": ["driveleech", "dleech"],
+        "neo": ["neo", "neolinks"],
+        "gdrex": ["gdrex", "gdex"],
+        "pixelcdn": ["pixelcdn", "pcdn"],
+        "extralink": ["extralink"],
+        "luxdrive": ["luxdrive", "lxd"],
+        "nexdrive": ["nexdrive", "nex"],
+        "transfer_it": ["transfer_it", "ti"],
+        "hblinks": ["hblinks", "hbl"],
+        "vegamovies": ["vegamovies", "vega"],
+    }.items()
+    for a in v
+}
+
+def _bysrv(cmd):
+    return EchoByRegistry.get(CMD_TO_KEY.get(str(cmd).lower().lstrip("/")))
+
+async def _bpinfo(cmd_name, target_url):
+    srv = _bysrv(cmd_name)
+    if not srv:
+        return None, "Unknown platform."
+    try:
+        p = urlparse(target_url)
+        if not p.scheme or not p.netloc:
+            return None, "Invalid URL."
+    except Exception:
+        return None, "Invalid URL."
+    return await srv.fetch(target_url)
+
+def _bylinks(links):
     if not isinstance(links, dict) or not links:
         return "╰╴ No direct links found."
+
     grouped = any("|" in str(k) for k in links)
     out = []
+
     if not grouped:
         items = [
             (str(k).strip() or "Link", v.strip())
@@ -128,9 +244,10 @@ def _bp_links(links):
         ]
         for i, (k, v) in enumerate(items):
             out.append(
-                f"{'╰╴' if i == len(items)-1 else '╞╴'} <b>{k}:</b> <a href=\"{v}\">Click Here</a>"
+                f'{"╰╴" if i == len(items)-1 else "╞╴"} <b>{k}:</b> <a href="{v}">Click Here</a>'
             )
         return "\n".join(out) if out else "╰╴ No direct links found."
+
     groups = {}
     for k, v in links.items():
         if not isinstance(v, str):
@@ -140,232 +257,54 @@ def _bp_links(links):
             continue
         a, b = str(k).split("|", 1)
         groups.setdefault(a.strip(), []).append((b.strip(), u))
+
     for g, items in groups.items():
         out.append(f"\n<b>{g}</b>")
         for i, (k, v) in enumerate(items):
             out.append(
-                f"{'╰╴' if i == len(items)-1 else '╞╴'} <b>{k}:</b> <a href=\"{v}\">Click Here</a>"
+                f'{"╰╴" if i == len(items)-1 else "╞╴"} <b>{k}:</b> <a href="{v}">Click Here</a>'
             )
+
     return "\n".join(out).strip()
 
-def _bp_norm(data, service):
-    if service == "hubcloud" and data.get("pack") and isinstance(data.get("results"), list):
-        return {
-            "hc_pack_results": data.get("results", []),
-            "hc_pack": True,
-            "total_files": data.get("total_files", len(data.get("results", []))),
-            "service": service,
-        }
-    root = data
-    if isinstance(data, dict) and isinstance(data.get("final"), dict):
-        root = data["final"]
-    title = root.get("title") or data.get("title") or root.get("file_name") or data.get("file_name") or "N/A"
-    filesize = root.get("filesize") or data.get("filesize") or root.get("file_size") or data.get("file_size") or "N/A"
-    file_format = (
-        root.get("format")
-        or root.get("file_format")
-        or data.get("format")
-        or data.get("file_format")
-        or "N/A"
-    )
-    links_clean = {}
-    raw_links = None
-    if isinstance(root, dict) and "links" in root:
-        raw_links = root.get("links")
-    elif isinstance(data, dict) and "links" in data:
-        raw_links = data.get("links")
-    if not raw_links and isinstance(data, dict) and "results" in data:
-        results = data.get("results")
-        if isinstance(results, list):
-            for item in results:
-                if not isinstance(item, dict):
-                    continue
-                lbl = item.get("quality") or item.get("name") or "Link"
-                url = item.get("link") or item.get("url")
-                if isinstance(url, str):
-                    u = url.strip()
-                    if u.startswith(("http://", "https://")):
-                        links_clean[str(lbl).strip()] = u
-            return {
-                "title": str(data.get("title") or title or "N/A"),
-                "filesize": str(data.get("filesize") or filesize or "N/A"),
-                "format": str(data.get("format") or file_format or "N/A"),
-                "links": links_clean,
-                "service": service,
-            }
-    if isinstance(raw_links, list):
-        for item in raw_links:
-            if not isinstance(item, dict):
-                continue
-            lbl = item.get("type") or item.get("name") or "Link"
-            url = item.get("url") or item.get("link")
-            if not isinstance(url, str):
-                continue
-            u = url.strip()
-            if not u.startswith(("http://", "https://")):
-                continue
-            links_clean[str(lbl).strip()] = u
-    elif isinstance(raw_links, dict):
-        for k, v in raw_links.items():
-            if not isinstance(v, str) and not isinstance(v, dict):
-                continue
-            url = None
-            lbl = _bp_label_from_key(k)
-            if isinstance(v, str):
-                url = v.strip()
-            elif isinstance(v, dict):
-                url = (
-                    v.get("link")
-                    or v.get("url")
-                    or v.get("google_final")
-                    or v.get("edited")
-                    or v.get("telegram_file")
-                    or v.get("gofile_final")
-                )
-                if v.get("name"):
-                    lbl = _bp_label_from_name(v["name"])
-            if not url:
-                continue
-            if not isinstance(url, str):
-                continue
-            u = url.strip()
-            if not u.startswith(("http://", "https://")):
-                continue
-            links_clean[lbl] = u
-    if not links_clean:
-        skip = {"title", "filesize", "format", "file_format", "success", "links", "file_name", "file_size"}
-        if isinstance(root, dict):
-            for k, v in root.items():
-                if k in skip:
-                    continue
-                url = None
-                lbl = str(k)
-                if isinstance(v, dict):
-                    url = (
-                        v.get("link")
-                        or v.get("url")
-                        or v.get("google_final")
-                        or v.get("edited")
-                        or v.get("telegram_file")
-                        or v.get("gofile_final")
-                    )
-                    if v.get("name"):
-                        lbl = _bp_label_from_name(v["name"])
-                elif isinstance(v, str) and v.startswith(("http://", "https://")):
-                    url = v
-                    lbl = _bp_label_from_key(k)
-                if not url:
-                    continue
-                if not isinstance(url, str):
-                    continue
-                u = url.strip()
-                if not u.startswith(("http://", "https://")):
-                    continue
-                links_clean[lbl] = u
-    return {
-        "title": str(title),
-        "filesize": str(filesize),
-        "format": str(file_format),
-        "links": links_clean,
-        "service": service,
-    }
+def _pack_html(results, page=1, per_page=10):
+    total = len(results)
+    max_page = (total - 1) // per_page + 1
+    page = max(1, min(page, max_page))
 
-async def _bp_info(cmd_name, target_url):
-    service = _bp_srv(cmd_name)
-    if not service:
-        return None, "Unknown platform for this command."
-    base = _BYPASS_ENDPOINTS.get(service)
-    if not base:
-        return None, "Bypass endpoint not configured for this service."
-    try:
-        parsed = urlparse(target_url)
-        if not parsed.scheme or not parsed.netloc:
-            return None, "Invalid URL."
-    except Exception:
-        return None, "Invalid URL."
-    api_url = base if service == "transfer_it" else f"{base}{quote_plus(target_url)}"
-    LOGGER.info(f"Bypassing via [{service}] -> {api_url}")
-    try:
-        if service == "transfer_it":
-            resp = await _sync_to_async(
-                requests.post,
-                api_url,
-                json={"url": target_url},
-                timeout=30,
-            )
+    start = (page - 1) * per_page
+    end = min(total, page * per_page)
+
+    out = []
+    for i, item in enumerate(results[start:end], start=1 + start):
+        name = (
+            item.get("file_name")
+            or item.get("quality")
+            or item.get("name")
+            or "File"
+        )
+
+        size = item.get("file_size") or "N/A"
+
+        if size != "N/A":
+            out.append(f"<b>{i}. {name}</b> <code>({size})</code>")
         else:
-            resp = await _sync_to_async(
-                requests.get,
-                api_url,
-                timeout=30,
-            )
-    except Exception as e:
-        LOGGER.error(f"Bypass HTTP error: {e}", exc_info=True)
-        return None, "Failed to reach bypass service."
-    if resp.status_code != 200:
-        LOGGER.error(f"Bypass API returned {resp.status_code}: {resp.text[:200]}")
-        return None, "Bypass service error."
-    try:
-        data = resp.json()
-    except json.JSONDecodeError as e:
-        LOGGER.error(f"Bypass JSON parse error: {e}")
-        return None, "Invalid response from bypass service."
-    if not isinstance(data, dict):
-        return None, "Unexpected response from bypass service."
-    if "success" in data and not data.get("success"):
-        return None, data.get("message") or "Bypass failed."
-    if service == "transfer_it":
-        direct = data.get("url")
-        if not direct:
-            return None, "File Expired or File Not Found"
-        fake = {
-            "title": "N/A",
-            "filesize": "N/A",
-            "format": "N/A",
-            "links": {"Direct Link": str(direct)},
-        }
-        return _bp_norm(fake, service), None
-    if service == "hblinks":
-        direct = data.get("url")
-        if not direct:
-            return None, "File Expired or Link Not Found"
-        fake = {
-            "title": "N/A",
-            "filesize": "N/A",
-            "format": "N/A",
-            "links": {
-                data.get("provider", "Direct Link"): str(direct)
-            },
-        }
-        return _bp_norm(fake, service), None
-    if service == "vegamovies":
-        results = data.get("results")
-        if not isinstance(results, list) or not results:
-            return None, "No files found."
-        links_clean = {}
-        for item in results:
-            if not isinstance(item, dict):
-                continue
-            fname = item.get("file_name", "File")
-            fsize = item.get("file_size", "N/A")
-            label_base = fname
-            if fsize and fsize != "N/A":
-                label_base = f"{fname} ({fsize})"
-            for link in item.get("links", []):
-                if not isinstance(link, dict):
-                    continue
-                url = link.get("url")
-                tag = link.get("tag") or "Link"
+            out.append(f"<b>{i}. {name}</b>")
+
+        if "links" in item and isinstance(item["links"], list):
+            for li in item["links"]:
+                typ = li.get("type") or li.get("tag") or "Link"
+                url = li.get("url")
                 if isinstance(url, str) and url.startswith(("http://", "https://")):
-                    label = f"{label_base} | {tag}"
-                    links_clean[label] = url
-        if not links_clean:
-            return None, "No direct links found."
-        fake = {
-            "title": "Vegamovies Files",
-            "filesize": "Multiple",
-            "format": "MKV",
-            "links": links_clean,
-        }
-        return _bp_norm(fake, service), None
-    return _bp_norm(data, service), None
+                    out.append(f'   ╞ <b>{typ}</b>: <a href="{url}">Click Here</a>')
+
+        elif "link" in item and isinstance(item["link"], str):
+            url = item["link"]
+            if url.startswith(("http://", "https://")):
+                out.append(f'   ╰╴ <b>Open Link</b>: <a href="{url}">Click Here</a>')
+
+        out.append("")
+
+    txt = "\n".join(out).strip()
+    nav = f"<b>Page: {page}/{max_page}</b> | <b>Total Files: {total}</b>"
+    return txt, nav, page, max_page
