@@ -1,9 +1,6 @@
 from dotenv import load_dotenv
 import os
 
-load_dotenv("../config.env", override=True)  
-load_dotenv("config.env", override=True) 
-
 class Config:
     API_ID = int(os.environ.get("API_ID", "10660564"))
     API_HASH = os.environ.get("API_HASH", "527e6297989f4e7cda5091f5bf41d0e4")
