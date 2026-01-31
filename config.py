@@ -10,7 +10,7 @@ class Config:
     BOT_TOKEN = os.environ.get("BOT_TOKEN", "8578236013:AAG_i73vFYPCQaL7x0xuFaEMnZWCzxIDnRY")
     DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://dasniru929:dasniru123@cluster0.51p5e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
     DATABASE_NAME = os.environ.get("DATABASE_NAME", "elitebotz")
-    OWNER_ID = int(os.environ.get("OWNER_ID", "7737048829l"))
+    OWNER_ID = int(os.environ.get("OWNER_ID", "7737048829"))
     SUDO_USERS = (
         list(map(int, os.environ.get("SUDO_USERS", "").split()))
         if os.environ.get("SUDO_USERS")
@@ -22,7 +22,7 @@ class Config:
         else []
     )
     # For Koyeb/render 
-    WEB_SERVER = os.environ.get("WEB_SERVER", "false").lower() == "true" # Set True if deploying on koyeb/render else False
+    WEB_SERVER = os.environ.get("WEB_SERVER", "True").lower() == "true" # Set True if deploying on koyeb/render else False
     PING_URL = os.environ.get("PING_URL", "") # koyeb/render's base url
     PING_TIME = int(os.environ.get("PING_TIME", 300))
     PORT = int(os.environ.get("PORT", 8080))
