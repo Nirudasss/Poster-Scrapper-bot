@@ -5,12 +5,12 @@ load_dotenv("../config.env", override=True)
 load_dotenv("config.env", override=True) 
 
 class Config:
-    API_ID = int(os.environ.get("API_ID", 0))
-    API_HASH = os.environ.get("API_HASH", "")
-    BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-    DATABASE_URL = os.environ.get("DATABASE_URL", "")
-    DATABASE_NAME = os.environ.get("DATABASE_NAME", "ebotz")
-    OWNER_ID = int(os.environ.get("OWNER_ID", 0))
+    API_ID = int(os.environ.get("API_ID", "10660564"))
+    API_HASH = os.environ.get("API_HASH", "527e6297989f4e7cda5091f5bf41d0e4")
+    BOT_TOKEN = os.environ.get("BOT_TOKEN", "8578236013:AAG_i73vFYPCQaL7x0xuFaEMnZWCzxIDnRY")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://dasniru929:dasniru123@cluster0.51p5e.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+    DATABASE_NAME = os.environ.get("DATABASE_NAME", "elitebotz")
+    OWNER_ID = int(os.environ.get("OWNER_ID", "7737048829l"))
     SUDO_USERS = (
         list(map(int, os.environ.get("SUDO_USERS", "").split()))
         if os.environ.get("SUDO_USERS")
@@ -110,7 +110,7 @@ class Config:
 <b>✺ Original URL:</b>
 <code>{original_url}</code>
 
-<blockquote>Bot By ➤ @NxTalks</blockquote>
+<blockquote>Bot By ➤ @Radha_Rani_Backup</blockquote>
 """.strip()
 
     POSER_TEMPLATE = """
@@ -128,5 +128,5 @@ class Config:
 {posters}
 </blockquote>
 
-<blockquote>Bot By ➤ @NxTalks</blockquote>
+<blockquote>Bot By ➤ @Radha_Rani_Backup</blockquote>
 """.strip()
