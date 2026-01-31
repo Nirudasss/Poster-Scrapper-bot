@@ -57,9 +57,9 @@ class echo(object):
 '''
     IMG = "https://i.ibb.co/ymD61smt/photo-2025-12-10-13-50-26-7582226305333067796.jpg"
     EFCT = 5104841245755180586 # 🔥 Fire Effect Animation, not using bcz working only in bot pm
-    ST_BTN = "Repo"
-    REPO = "https://github.com/XalFH/Poster-Scraper-Bot"
+    ST_BTN = "Owner"
+    REPO = "https://t.me/PRESIDENTIND7"
     UP_BTN = "Updates"
-    UPDTE = "https://t.me/EchoBotz"
+    UPDTE = "https://t.me/Radha_Rani_Backup"
     SP_BTN = "Support Group"
-    SP_GR = "https://t.me/NxTalks"
+    SP_GR = "https://t.me/Radha_Rani_Backup"
