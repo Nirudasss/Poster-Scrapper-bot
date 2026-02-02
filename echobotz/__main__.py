@@ -35,7 +35,6 @@ async def main():
     )
 
     await EchoBot.bot.set_bot_commands(_get_bot_commands())
-
     add_plugs()
 
     if os.path.isfile(".restartmsg"):
@@ -57,18 +56,18 @@ async def main():
             os.remove(".restartmsg")
         except Exception as e:
             LOGGER.error(f"Restart notify error: {e}")
-            
-if Config.WEB_SERVER and WEB_OK:
-    LOGGER.info("Starting web server...")
-    await _start_web()   # 🔑 start immediately
-    bot_loop.create_task(_ping(Config.PING_URL, Config.PING_TIME))
-else:
-    LOGGER.info("Web server disabled")
+
+    # ✅ WEB SERVER MUST BE HERE
+    if Config.WEB_SERVER and WEB_OK:
+        LOGGER.info("Starting web server...")
+        bot_loop.create_task(_start_web())
+        bot_loop.create_task(_ping(Config.PING_URL, Config.PING_TIME))
+    else:
+        LOGGER.info("Web server disabled")
 
     LOGGER.info("EchoBot fully started")
 
     await idle()
-
     await EchoBot.stop()
 
 
