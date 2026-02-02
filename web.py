@@ -1,41 +1,17 @@
-import asyncio
-from aiohttp import web, ClientSession, ClientTimeout
+import os
+from aiohttp import web
 
-from config import Config
+async def home(request):
+    return web.Response(text="OK")
 
-async def _start_web():
-    r = web.RouteTableDef()
+app = web.Application()
 
-    @r.get("/", allow_head=True)
-    async def _root(req):
-        return web.json_response({"status": "running", "Creator": "gitHub.com/XalFH"})
+# Accept GET, HEAD, OPTIONS – Koyeb health checks
+app.router.add_route("*", "/", home)
 
-    @r.get("/health", allow_head=True)
-    async def _health(req):
-        return web.json_response({"status": "healthy"})
-
-    app = web.Application(client_max_size=30_000_000)
-    app.add_routes(r)
-
-    runner = web.AppRunner(app, access_log=None) 
-    await runner.setup()
-
-    port = Config.PORT
-    await web.TCPSite(runner, "0.0.0.0", port).start()
-
-async def _ping(url, interval):
-    if not url:
-        return
-
-    await asyncio.sleep(60)
-
-    while True:
-        await asyncio.sleep(interval)
-        try:
-            async with ClientSession(
-                timeout=ClientTimeout(total=10)
-            ) as session:
-                async with session.get(url) as resp:
-                    print(f"Pinged: {resp.status}")
-        except Exception:
-            pass
+if __name__ == "__main__":
+    web.run_app(
+        app,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000))
+    )
