@@ -11,7 +11,7 @@ class Config:
     API_HASH = os.environ.get("API_HASH")
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
     DATABASE_URL = os.environ.get("DATABASE_URL")
-    DATABASE_NAME = os.environ.get("DATABASE_NAME", "elitebotz")
+    DATABASE_NAME = os.environ.get("DATABASE_NAME", "elitebotzking")
     OWNER_ID = int(os.environ.get("OWNER_ID", 0))
 
     # ──────────────── OPTIONAL LIST VALUES ────────────────
@@ -28,7 +28,7 @@ class Config:
     )
 
     # ──────────────── SERVER / DEPLOYMENT ────────────────
-    WEB_SERVER = os.environ.get("WEB_SERVER", "False").lower() == "true"
+    WEB_SERVER = os.environ.get("WEB_SERVER", "True").lower() == "true"
     PING_URL = os.environ.get("PING_URL", "")
     PING_TIME = int(os.environ.get("PING_TIME", 300))
     PORT = int(os.environ.get("PORT", 8080))
