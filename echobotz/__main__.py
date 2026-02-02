@@ -58,12 +58,12 @@ async def main():
         except Exception as e:
             LOGGER.error(f"Restart notify error: {e}")
             
-    if Config.WEB_SERVER and WEB_OK:
-        LOGGER.info("Starting web server...")
-        bot_loop.create_task(_start_web())
-        bot_loop.create_task(_ping(Config.PING_URL, Config.PING_TIME))
-    else:
-        LOGGER.info("Web server disabled")
+if Config.WEB_SERVER and WEB_OK:
+    LOGGER.info("Starting web server...")
+    await _start_web()   # 🔑 start immediately
+    bot_loop.create_task(_ping(Config.PING_URL, Config.PING_TIME))
+else:
+    LOGGER.info("Web server disabled")
 
     LOGGER.info("EchoBot fully started")
 
