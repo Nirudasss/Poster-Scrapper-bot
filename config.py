@@ -28,7 +28,7 @@ class Config:
     )
 
     # ──────────────── SERVER / DEPLOYMENT ────────────────
-    WEB_SERVER = os.environ.get("WEB_SERVER", "True").lower() == "true"
+    WEB_SERVER = os.environ.get("WEB_SERVER", "true").lower() == "true"
     PING_URL = os.environ.get("PING_URL", "")
     PING_TIME = int(os.environ.get("PING_TIME", 300))
     PORT = int(os.environ.get("PORT", 8080))
